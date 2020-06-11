@@ -1,5 +1,5 @@
 import { patchEvent } from '../../src/modules/events'
-import { vOnModifiersGuard, vOnKeysGuard } from '@vue/runtime-dom'
+import { withModifiers, withKeys } from '@vue/runtime-dom'
 
 function triggerEvent(
   target: Element,
@@ -21,10 +21,10 @@ describe('runtime-dom: v-on directive', () => {
     const parent = document.createElement('div')
     const child = document.createElement('input')
     parent.appendChild(child)
-    const childNextValue = vOnModifiersGuard(jest.fn(), ['prevent', 'stop'])
-    patchEvent(child, 'click', null, childNextValue, null)
+    const childNextValue = withModifiers(jest.fn(), ['prevent', 'stop'])
+    patchEvent(child, 'onClick', null, childNextValue, null)
     const parentNextValue = jest.fn()
-    patchEvent(parent, 'click', null, parentNextValue, null)
+    patchEvent(parent, 'onClick', null, parentNextValue, null)
     expect(triggerEvent(child, 'click').defaultPrevented).toBe(true)
     expect(parentNextValue).not.toBeCalled()
   })
@@ -34,8 +34,8 @@ describe('runtime-dom: v-on directive', () => {
     const child = document.createElement('input')
     parent.appendChild(child)
     const fn = jest.fn()
-    const handler = vOnModifiersGuard(fn, ['self'])
-    patchEvent(parent, 'click', null, handler, null)
+    const handler = withModifiers(fn, ['self'])
+    patchEvent(parent, 'onClick', null, handler, null)
     triggerEvent(child, 'click')
     expect(fn).not.toBeCalled()
   })
@@ -44,36 +44,48 @@ describe('runtime-dom: v-on directive', () => {
     const el = document.createElement('div')
     const fn = jest.fn()
     // <div @keyup.ctrl.esc="test"/>
-    const nextValue = vOnKeysGuard(vOnModifiersGuard(fn, ['ctrl']), ['esc'])
-    patchEvent(el, 'keyup', null, nextValue, null)
+    const nextValue = withKeys(withModifiers(fn, ['ctrl']), [
+      'esc',
+      'arrow-left'
+    ])
+    patchEvent(el, 'onKeyup', null, nextValue, null)
+
     triggerEvent(el, 'keyup', e => (e.key = 'a'))
     expect(fn).not.toBeCalled()
+
     triggerEvent(el, 'keyup', e => {
       e.ctrlKey = false
       e.key = 'esc'
     })
     expect(fn).not.toBeCalled()
+
     triggerEvent(el, 'keyup', e => {
       e.ctrlKey = true
       e.key = 'Escape'
     })
-    expect(fn).toBeCalled()
+    expect(fn).toBeCalledTimes(1)
+
+    triggerEvent(el, 'keyup', e => {
+      e.ctrlKey = true
+      e.key = 'ArrowLeft'
+    })
+    expect(fn).toBeCalledTimes(2)
   })
 
   test('it should support "exact" modifier', () => {
     const el = document.createElement('div')
     // Case 1: <div @keyup.exact="test"/>
     const fn1 = jest.fn()
-    const next1 = vOnModifiersGuard(fn1, ['exact'])
-    patchEvent(el, 'keyup', null, next1, null)
+    const next1 = withModifiers(fn1, ['exact'])
+    patchEvent(el, 'onKeyup', null, next1, null)
     triggerEvent(el, 'keyup')
     expect(fn1.mock.calls.length).toBe(1)
     triggerEvent(el, 'keyup', e => (e.ctrlKey = true))
     expect(fn1.mock.calls.length).toBe(1)
     // Case 2: <div @keyup.ctrl.a.exact="test"/>
     const fn2 = jest.fn()
-    const next2 = vOnKeysGuard(vOnModifiersGuard(fn2, ['ctrl', 'exact']), ['a'])
-    patchEvent(el, 'keyup', null, next2, null)
+    const next2 = withKeys(withModifiers(fn2, ['ctrl', 'exact']), ['a'])
+    patchEvent(el, 'onKeyup', null, next2, null)
     triggerEvent(el, 'keyup', e => (e.key = 'a'))
     expect(fn2).not.toBeCalled()
     triggerEvent(el, 'keyup', e => {
@@ -96,8 +108,8 @@ describe('runtime-dom: v-on directive', () => {
     buttons.forEach(button => {
       const el = document.createElement('div')
       const fn = jest.fn()
-      const handler = vOnModifiersGuard(fn, [button])
-      patchEvent(el, 'mousedown', null, handler, null)
+      const handler = withModifiers(fn, [button])
+      patchEvent(el, 'onMousedown', null, handler, null)
       buttons.filter(b => b !== button).forEach(button => {
         triggerEvent(el, 'mousedown', e => (e.button = buttonCodes[button]))
       })
@@ -105,5 +117,14 @@ describe('runtime-dom: v-on directive', () => {
       triggerEvent(el, 'mousedown', e => (e.button = buttonCodes[button]))
       expect(fn).toBeCalled()
     })
+  })
+
+  it('should handle multiple arguments when using modifiers', () => {
+    const el = document.createElement('div')
+    const fn = jest.fn()
+    const handler = withModifiers(fn, ['ctrl'])
+    const event = triggerEvent(el, 'click', e => (e.ctrlKey = true))
+    handler(event, 'value', true)
+    expect(fn).toBeCalledWith(event, 'value', true)
   })
 })
