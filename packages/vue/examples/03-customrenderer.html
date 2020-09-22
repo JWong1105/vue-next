@@ -1,0 +1,95 @@
+<script type="text/x-template" id="chart">
+  <bar-chart :data="chartData"></bar-chart>
+</script>
+
+<div id="app"></div>
+
+<script src="../dist/vue.global.js"></script>
+<script>
+  const {createRenderer} = Vue
+  
+  // 目标：创建一个自定义渲染器，能够将数据按照柱状图画出来
+  // 使用canvas绘图
+  const nodeOps = {
+    createElement(tag) {
+      return {tag}
+    },
+    insert(child, parent) {
+      child.parent = parent
+      if (!parent.childs) {
+        parent.childs = [child]
+      } else {
+        parent.childs.push(child)
+      }
+      // 当元素是canvas，执行绘制逻辑
+      if (parent.nodeType === 1) {
+        draw(child)
+      }
+    },
+    patchProp(el, key, prevValue, nextValue) {
+      el[key] = nextValue
+    }
+  }
+
+  // 绘制逻辑
+  const draw = (el) => {
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    if (el.tag == 'bar-chart') {
+      const { data } = el;
+      const barWidth = canvas.width / 10,
+        gap = 20,
+        paddingLeft = (data.length * barWidth + (data.length - 1) * gap) / 2,
+        paddingBottom = 10;
+
+      data.forEach(({ title, count, color }, index) => {
+        const x = paddingLeft + index * (barWidth + gap)
+        const y = canvas.height - paddingBottom - count
+        ctx.fillStyle = color
+        ctx.fillRect(x, y, barWidth, count)
+        // text
+      });
+    }
+  }
+  
+  const renderer = createRenderer(nodeOps)
+
+  let canvas, ctx
+  
+  // 扩展createApp，是默认mount方法可以创建一个画布
+  function createCanvasApp(App) {
+    const app = renderer.createApp(App)
+
+    // 保存默认mount
+    const mount = app.mount
+    
+    app.mount = function(selector) {
+      // 创建画布
+      canvas = document.createElement('canvas')
+      canvas.width = window.innerWidth
+      canvas.height = window.innerHeight
+      ctx = canvas.getContext('2d')
+      document.querySelector(selector).appendChild(canvas)
+
+      // 默认挂载
+      mount(canvas)
+    }
+    
+    return app
+  }
+  
+  // 创建app实例
+  createCanvasApp({
+    template: '#chart',
+    data() {
+      return {
+        chartData: [
+          {title:'青铜', count: 200, color: 'brown'},
+          {title:'砖石', count: 100, color: 'skyblue'},
+          {title:'星耀', count: 100, color: 'purple'},
+          {title:'王者', count: 50, color: 'gold'},
+        ]
+      }
+    },
+  })
+  .mount("#app")
+</script>

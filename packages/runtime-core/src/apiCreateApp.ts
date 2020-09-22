@@ -126,6 +126,7 @@ export function createAppAPI<HostElement>(
 
     let isMounted = false
 
+    // 真正的app实例对象
     const app: App = (context.app = {
       _uid: uid++,
       _component: rootComponent as ConcreteComponent,
@@ -212,6 +213,7 @@ export function createAppAPI<HostElement>(
 
       mount(rootContainer: HostElement, isHydrate?: boolean): any {
         if (!isMounted) {
+          // 初始化
           const vnode = createVNode(
             rootComponent as ConcreteComponent,
             rootProps
@@ -230,6 +232,7 @@ export function createAppAPI<HostElement>(
           if (isHydrate && hydrate) {
             hydrate(vnode as VNode<Node, Element>, rootContainer as any)
           } else {
+            // 渲染：将传入vnode转换为真实dom，追加到rootContainer
             render(vnode, rootContainer)
           }
           isMounted = true

@@ -29,6 +29,7 @@ let renderer: Renderer<Element> | HydrationRenderer
 
 let enabledHydration = false
 
+// 获取一个渲染器renderer
 function ensureRenderer() {
   return renderer || (renderer = createRenderer<Node, Element>(rendererOptions))
 }
@@ -50,6 +51,7 @@ export const hydrate = ((...args) => {
   ensureHydrationRenderer().hydrate(...args)
 }) as RootHydrateFunction
 
+// 实例创建函数，扩展默认的createApp
 export const createApp = ((...args) => {
   const app = ensureRenderer().createApp(...args)
 
@@ -57,8 +59,10 @@ export const createApp = ((...args) => {
     injectNativeTagCheck(app)
   }
 
+  // 扩展mount方法
   const { mount } = app
   app.mount = (containerOrSelector: Element | string): any => {
+    // 宿主元素
     const container = normalizeContainer(containerOrSelector)
     if (!container) return
     const component = app._component

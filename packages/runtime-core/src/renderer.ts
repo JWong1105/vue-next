@@ -465,6 +465,7 @@ function baseCreateRenderer(
       n2.dynamicChildren = null
     }
 
+    // 获取新vnode节点类型
     const { type, ref, shapeFlag } = n2
     switch (type) {
       case Text:
@@ -505,6 +506,7 @@ function baseCreateRenderer(
             optimized
           )
         } else if (shapeFlag & ShapeFlags.COMPONENT) {
+          // 初始化时走这个，因为传入的是根组件
           processComponent(
             n1,
             n2,
@@ -1206,6 +1208,7 @@ function baseCreateRenderer(
           optimized
         )
       } else {
+        // 初始化时，走挂载流程
         mountComponent(
           n2,
           container,
@@ -2199,12 +2202,14 @@ function baseCreateRenderer(
     }
   }
 
+  // 转换vnode为node，添加到container
   const render: RootRenderFunction = (vnode, container) => {
     if (vnode == null) {
       if (container._vnode) {
         unmount(container._vnode, null, null, true)
       }
     } else {
+      // 补丁函数
       patch(container._vnode || null, vnode, container)
     }
     flushPostFlushCbs()
@@ -2233,9 +2238,11 @@ function baseCreateRenderer(
     >)
   }
 
+  // 返回的renderer
   return {
     render,
     hydrate,
+    // app创建函数来自于createAppAPI返回值
     createApp: createAppAPI(render, hydrate)
   }
 }
